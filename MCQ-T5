@@ -1,0 +1,47 @@
+import sys
+import logging
+from transformers import T5ForConditionalGeneration, T5Tokenizer
+
+def main():
+    # Suppress warnings/logging
+    logging.getLogger("transformers").setLevel(logging.ERROR)
+
+    # Expect exactly 5 arguments: script, question, optA, optB, optC, optD
+    if len(sys.argv) != 6:
+        return  # exit silently if wrong usage
+
+    _, question, optA, optB, optC, optD = sys.argv
+
+    # Load model and tokenizer
+    tokenizer = T5Tokenizer.from_pretrained("google/flan-t5-xl")
+    model = T5ForConditionalGeneration.from_pretrained("google/flan-t5-xl")
+
+    # Construct a prompt that clearly instructs the model
+    prompt = (
+        f"Select the correct answer (A, B, C, or D) for the following question:\n\n"
+        f"Question: {question}\n"
+        f"A: {optA}\n"
+        f"B: {optB}\n"
+        f"C: {optC}\n"
+        f"D: {optD}\n"
+        f"Answer (just the letter):"
+    )
+
+    # Tokenize and generate output
+    inputs = tokenizer(prompt, return_tensors="pt")
+    outputs = model.generate(
+        **inputs,
+        max_new_tokens=4,
+        num_beams=5,
+        early_stopping=True
+    )
+
+    # Decode and extract the first character (expected to be A/B/C/D)
+    decoded = tokenizer.decode(outputs[0], skip_special_tokens=True).strip()
+    answer = decoded[0].upper() if decoded else ""
+
+    # Only print the letter (and nothing else)
+    sys.stdout.write(answer)
+
+if __name__ == "__main__":
+    main()
